@@ -234,10 +234,10 @@ export const ADMIN_HTML = `<!DOCTYPE html>
           <div class="card-header">📡 REST API 使用说明</div>
           <div class="card-body" style="padding: 1rem; font-size: 0.8rem;">
             <p style="margin-bottom: 0.5rem; font-weight: 600;">创建短链接</p>
-            <pre style="background:#1e293b;color:#e2e8f0;padding:0.75rem;border-radius:6px;overflow-x:auto;font-size:0.75rem;line-height:1.5;">curl -X POST https://link.zcq100.com/api/v1/shorten \\\n  -H "Content-Type: application/json" \\\n  -H "Authorization: Bearer &lt;API_KEY&gt;" \\\n  -d '{"target_url": "https://example.com"}'</pre>
+            <pre style="background:#1e293b;color:#e2e8f0;padding:0.75rem;border-radius:6px;overflow-x:auto;font-size:0.75rem;line-height:1.5;">curl -X POST <span class="api-base-url"></span>/api/v1/shorten \\\n  -H "Content-Type: application/json" \\\n  -H "Authorization: Bearer &lt;API_KEY&gt;" \\\n  -d '{"target_url": "https://example.com"}'</pre>
             <p style="margin: 0.75rem 0 0.5rem; font-weight: 600;">可选参数</p>
             <pre style="background:#1e293b;color:#e2e8f0;padding:0.75rem;border-radius:6px;overflow-x:auto;font-size:0.75rem;line-height:1.5;">{\n  "target_url": "https://example.com",\n  "slug": "custom-code",       // 可选，自定义短码\n  "title": "链接描述"           // 可选，备注标题\n}</pre>
-            <p style="margin-top:0.75rem;color:var(--text-muted);">返回: <code>{"id":1,"slug":"xxx","target_url":"...","short_url":"https://link.zcq100.com/xxx"}</code></p>
+            <p style="margin-top:0.75rem;color:var(--text-muted);">返回: <code>{"id":1,"slug":"xxx","target_url":"...","short_url":"<span class="api-base-url"></span>/xxx"}</code></p>
           </div>
         </div>
         <div class="card">
@@ -245,7 +245,7 @@ export const ADMIN_HTML = `<!DOCTYPE html>
           <div class="card-body" style="padding: 1rem; font-size: 0.8rem;">
             <p style="margin-bottom: 0.5rem; font-weight: 600;">Claude Desktop 配置</p>
             <p style="color:var(--text-muted);margin-bottom:0.5rem;">编辑 <code>claude_desktop_config.json</code>：</p>
-            <pre style="background:#1e293b;color:#e2e8f0;padding:0.75rem;border-radius:6px;overflow-x:auto;font-size:0.75rem;line-height:1.5;">{\n  "mcpServers": {\n    "short-url": {\n      "type": "http",\n      "url": "https://link.zcq100.com/mcp",\n      "headers": {\n        "Authorization": "Bearer &lt;API_KEY&gt;"\n      }\n    }\n  }\n}</pre>
+            <pre style="background:#1e293b;color:#e2e8f0;padding:0.75rem;border-radius:6px;overflow-x:auto;font-size:0.75rem;line-height:1.5;">{\n  "mcpServers": {\n    "short-url": {\n      "type": "http",\n      "url": "<span class="api-base-url"></span>/mcp",\n      "headers": {\n        "Authorization": "Bearer &lt;API_KEY&gt;"\n      }\n    }\n  }\n}</pre>
             <p style="margin: 0.75rem 0 0.5rem; font-weight: 600;">可用工具</p>
             <table style="font-size:0.75rem;">
               <thead><tr><th>工具</th><th>说明</th></tr></thead>
@@ -403,6 +403,7 @@ function showLogin() {
 function showApp() {
   document.getElementById('loginPage').style.display = 'none';
   document.getElementById('appLayout').classList.add('active');
+  fillBaseUrl();
 }
 
 document.getElementById('loginForm').addEventListener('submit', async e => {
@@ -771,6 +772,11 @@ document.getElementById('passwordForm').addEventListener('submit', async e => {
 });
 
 // ============ Utilities ============
+function fillBaseUrl() {
+  document.querySelectorAll('.api-base-url').forEach(el => {
+    el.textContent = location.origin;
+  });
+}
 function esc(str) {
   const div = document.createElement('div');
   div.textContent = str;
