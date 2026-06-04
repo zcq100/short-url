@@ -1,0 +1,15 @@
+name = "short-url"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "short-url-db"
+database_id = "4640b858-8af6-4615-8f5f-d68ba5367bb1"
+
+[[routes]]
+pattern = "link.zcq100.com"
+custom_domain = true
+
+[observability]
+enabled = true
