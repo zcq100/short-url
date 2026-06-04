@@ -36,6 +36,11 @@ export default {
       return handleMcpRequest(env.DB, request);
     }
 
+    // === API v1 endpoint (external, before /api/ prefix) ===
+    if (path === '/api/v1/shorten') {
+      return handleV1Shorten(request, env, apiCorsHeaders);
+    }
+
     // === API routes ===
     if (path.startsWith('/api/')) {
       return handleApiRoutes(request, env, ctx, apiCorsHeaders);
@@ -44,11 +49,6 @@ export default {
     // === Admin panel ===
     if (path === '/admin' || path.startsWith('/admin/')) {
       return handleAdminPanel();
-    }
-
-    // === API v1 endpoint (external) ===
-    if (path === '/api/v1/shorten') {
-      return handleV1Shorten(request, env, apiCorsHeaders);
     }
 
     // === Home page ===
