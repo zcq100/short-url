@@ -127,8 +127,16 @@ export async function deleteLink(db: D1Database, id: number): Promise<boolean> {
 }
 
 export async function incrementClicks(db: D1Database, slug: string): Promise<void> {
-  const stmt = db.prepare('UPDATE links SET clicks = clicks + 1 WHERE slug = ?');
-  await stmt.bind(slug).run();
+  const link = await getLinkBySlug(db, slug);
+  if (!link) return;
+
+  // Update total clicks on link
+  const stmt1 = db.prepare('UPDATE links SET clicks = clicks + 1 WHERE slug = ?');
+  await stmt1.bind(slug).run();
+
+  // Log click event
+  const stmt2 = db.prepare('INSERT INTO click_logs (link_id) VALUES (?)');
+  await stmt2.bind(link.id).run();
 }
 
 export async function slugExists(db: D1Database, slug: string): Promise<boolean> {
@@ -252,6 +260,40 @@ export async function getSession(db: D1Database, sessionId: string): Promise<Ses
 export async function deleteSession(db: D1Database, sessionId: string): Promise<void> {
   const stmt = db.prepare('DELETE FROM sessions WHERE id = ?');
   await stmt.bind(sessionId).run();
+}
+
+// ============ Click Logs & Stats ============
+
+export async function getDailyNewLinks(db: D1Database, days = 30): Promise<{ date: string; count: number }[]> {
+  const stmt = db.prepare(
+    `SELECT DATE(created_at) as date, COUNT(*) as count
+     FROM links
+     WHERE created_at >= DATE('now', ?)
+     GROUP BY DATE(created_at)
+     ORDER BY date ASC`
+  );
+  const result = await stmt.bind(`-${days} days`).all<{ date: string; count: number }>();
+  return result.results;
+}
+
+export async function getDailyClicks(db: D1Database, days = 30): Promise<{ date: string; count: number }[]> {
+  const stmt = db.prepare(
+    `SELECT DATE(created_at) as date, COUNT(*) as count
+     FROM click_logs
+     WHERE created_at >= DATE('now', ?)
+     GROUP BY DATE(created_at)
+     ORDER BY date ASC`
+  );
+  const result = await stmt.bind(`-${days} days`).all<{ date: string; count: number }>();
+  return result.results;
+}
+
+export async function getTopLinks(db: D1Database, limit = 10): Promise<Link[]> {
+  const stmt = db.prepare(
+    'SELECT * FROM links ORDER BY clicks DESC LIMIT ?'
+  );
+  const result = await stmt.bind(limit).all<Link>();
+  return result.results;
 }
 
 export async function cleanExpiredSessions(db: D1Database): Promise<void> {

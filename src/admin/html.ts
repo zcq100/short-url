@@ -6,6 +6,7 @@ export const ADMIN_HTML = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Short URL - 管理后台</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   :root {
     --primary: #4f46e5;
@@ -169,6 +170,21 @@ export const ADMIN_HTML = `<!DOCTYPE html>
         <div class="stat-card"><div class="label">总链接数</div><div class="value" id="statTotalLinks">—</div></div>
         <div class="stat-card"><div class="label">总点击量</div><div class="value" id="statTotalClicks">—</div></div>
       </div>
+      <div class="card" style="margin-bottom: 1rem;">
+        <div class="card-header">📈 每日趋势（近30天）</div>
+        <div class="card-body" style="padding: 1rem;">
+          <canvas id="dailyChart" style="max-height: 300px;"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">🔥 热门链接 Top 10</div>
+        <div class="card-body">
+          <table>
+            <thead><tr><th>#</th><th>短码</th><th>目标 URL</th><th>点击量</th></tr></thead>
+            <tbody id="topLinksTableBody"><tr><td colspan="4" class="empty-state"><div class="icon">📭</div>暂无数据</td></tr></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- Links -->
@@ -201,7 +217,7 @@ export const ADMIN_HTML = `<!DOCTYPE html>
         <h2>🔑 API Keys</h2>
         <p>管理 API Key，用于 MCP 和 REST API 访问</p>
       </div>
-      <div class="card">
+      <div class="card" style="margin-bottom: 1rem;">
         <div class="card-header">
           <span>所有 API Keys</span>
           <button class="btn btn-primary btn-sm" id="createApiKeyBtn">+ 创建 Key</button>
@@ -211,6 +227,34 @@ export const ADMIN_HTML = `<!DOCTYPE html>
             <thead><tr><th>名称</th><th>前缀</th><th>创建时间</th><th>最后使用</th><th>操作</th></tr></thead>
             <tbody id="apiKeysTableBody"><tr><td colspan="5" class="empty-state"><div class="icon">🔑</div>暂无 API Key</td></tr></tbody>
           </table>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="card">
+          <div class="card-header">📡 REST API 使用说明</div>
+          <div class="card-body" style="padding: 1rem; font-size: 0.8rem;">
+            <p style="margin-bottom: 0.5rem; font-weight: 600;">创建短链接</p>
+            <pre style="background:#1e293b;color:#e2e8f0;padding:0.75rem;border-radius:6px;overflow-x:auto;font-size:0.75rem;line-height:1.5;">curl -X POST https://link.zcq100.com/api/v1/shorten \\\n  -H "Content-Type: application/json" \\\n  -H "Authorization: Bearer &lt;API_KEY&gt;" \\\n  -d '{"target_url": "https://example.com"}'</pre>
+            <p style="margin: 0.75rem 0 0.5rem; font-weight: 600;">可选参数</p>
+            <pre style="background:#1e293b;color:#e2e8f0;padding:0.75rem;border-radius:6px;overflow-x:auto;font-size:0.75rem;line-height:1.5;">{\n  "target_url": "https://example.com",\n  "slug": "custom-code",       // 可选，自定义短码\n  "title": "链接描述"           // 可选，备注标题\n}</pre>
+            <p style="margin-top:0.75rem;color:var(--text-muted);">返回: <code>{"id":1,"slug":"xxx","target_url":"...","short_url":"https://link.zcq100.com/xxx"}</code></p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">🤖 MCP 集成说明</div>
+          <div class="card-body" style="padding: 1rem; font-size: 0.8rem;">
+            <p style="margin-bottom: 0.5rem; font-weight: 600;">Claude Desktop 配置</p>
+            <p style="color:var(--text-muted);margin-bottom:0.5rem;">编辑 <code>claude_desktop_config.json</code>：</p>
+            <pre style="background:#1e293b;color:#e2e8f0;padding:0.75rem;border-radius:6px;overflow-x:auto;font-size:0.75rem;line-height:1.5;">{\n  "mcpServers": {\n    "short-url": {\n      "type": "http",\n      "url": "https://link.zcq100.com/mcp",\n      "headers": {\n        "Authorization": "Bearer &lt;API_KEY&gt;"\n      }\n    }\n  }\n}</pre>
+            <p style="margin: 0.75rem 0 0.5rem; font-weight: 600;">可用工具</p>
+            <table style="font-size:0.75rem;">
+              <thead><tr><th>工具</th><th>说明</th></tr></thead>
+              <tbody>
+                <tr><td><code>create_short_link</code></td><td>创建短链接，参数：url (必填), slug (可选), title (可选)</td></tr>
+                <tr><td><code>get_link_info</code></td><td>查询链接详情，参数：slug (必填)</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -422,13 +466,100 @@ window.addEventListener('hashchange', () => {
 });
 
 // ============ Dashboard ============
+let dailyChart = null;
+
 async function loadDashboard() {
+  // Load basic stats
   const resp = await api('/api/stats');
   if (resp.ok) {
     const data = await resp.json();
     document.getElementById('statTotalLinks').textContent = data.totalLinks || 0;
     document.getElementById('statTotalClicks').textContent = data.totalClicks || 0;
   }
+
+  // Load daily stats for chart
+  const dailyResp = await api('/api/stats/daily?days=30');
+  if (dailyResp.ok) {
+    const daily = await dailyResp.json();
+    const labels = [];
+    const newLinksData = [];
+    const clicksData = [];
+    // Fill all 30 days, merging with returned data
+    const newLinksMap = {};
+    const clicksMap = {};
+    daily.newLinks.forEach(d => { newLinksMap[d.date] = d.count; });
+    daily.clicks.forEach(d => { clicksMap[d.date] = d.count; });
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      labels.push(key.slice(5)); // MM-DD
+      newLinksData.push(newLinksMap[key] || 0);
+      clicksData.push(clicksMap[key] || 0);
+    }
+    renderChart(labels, newLinksData, clicksData);
+  }
+
+  // Load top links
+  const topResp = await api('/api/stats/top-links?limit=10');
+  if (topResp.ok) {
+    const topLinks = await topResp.json();
+    const tbody = document.getElementById('topLinksTableBody');
+    if (topLinks.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-state"><div class="icon">📭</div>暂无数据</td></tr>';
+    } else {
+      tbody.innerHTML = topLinks.map((l, i) => \`
+        <tr>
+          <td>\${i + 1}</td>
+          <td><span class="slug-cell">\${esc(l.slug)}</span></td>
+          <td><a href="\${esc(l.target_url)}" target="_blank" class="url-cell" title="\${esc(l.target_url)}">\${esc(truncate(l.target_url, 50))}</a></td>
+          <td><strong>\${l.clicks}</strong></td>
+        </tr>\`
+      ).join('');
+    }
+  }
+}
+
+function renderChart(labels, newLinksData, clicksData) {
+  const ctx = document.getElementById('dailyChart').getContext('2d');
+  if (dailyChart) dailyChart.destroy();
+  dailyChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: '新增链接',
+          data: newLinksData,
+          backgroundColor: 'rgba(79, 70, 229, 0.7)',
+          borderColor: '#4f46e5',
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+        {
+          label: '访问量',
+          data: clicksData,
+          backgroundColor: 'rgba(16, 185, 129, 0.7)',
+          borderColor: '#10b981',
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { stepSize: 1 },
+        },
+      },
+    },
+  });
 }
 
 // ============ Links Management ============

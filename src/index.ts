@@ -1,7 +1,7 @@
 import { D1Database } from '@cloudflare/workers-types';
 import { checkAuth, ensureDefaultAdmin } from './auth';
 import { handleLogin, handleLogout, handleChangePassword, handleUpdateProfile } from './api/auth';
-import { handleListLinks, handleCreateLink, handleUpdateLink, handleDeleteLink, handleGetLinkStats, handleDashboardStats } from './api/links';
+import { handleListLinks, handleCreateLink, handleUpdateLink, handleDeleteLink, handleGetLinkStats, handleDashboardStats, handleDailyStats, handleTopLinks } from './api/links';
 import { handleListApiKeys, handleCreateApiKey, handleDeleteApiKey } from './api/apikeys';
 import { handleRedirect } from './redirect';
 import { handleMcpRequest } from './mcp/index';
@@ -169,6 +169,20 @@ async function handleApiRoutes(
   if (path === '/api/stats' && method === 'GET') {
     return requireSession(async () => {
       return withCors(await handleDashboardStats(env.DB));
+    });
+  }
+
+  // Daily stats (charts)
+  if (path === '/api/stats/daily' && method === 'GET') {
+    return requireSession(async () => {
+      return withCors(await handleDailyStats(env.DB, url));
+    });
+  }
+
+  // Top links
+  if (path === '/api/stats/top-links' && method === 'GET') {
+    return requireSession(async () => {
+      return withCors(await handleTopLinks(env.DB, url));
     });
   }
 

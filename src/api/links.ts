@@ -7,6 +7,9 @@ import {
   getLinkById,
   slugExists,
   getDashboardStats,
+  getDailyNewLinks,
+  getDailyClicks,
+  getTopLinks,
 } from '../db';
 import type { AuthResult } from '../auth';
 
@@ -152,6 +155,27 @@ export async function handleDashboardStats(
 ): Promise<Response> {
   const stats = await getDashboardStats(db);
   return json(stats);
+}
+
+export async function handleDailyStats(
+  db: D1Database,
+  url: URL
+): Promise<Response> {
+  const days = parseInt(url.searchParams.get('days') || '30', 10);
+  const [newLinks, clicks] = await Promise.all([
+    getDailyNewLinks(db, days),
+    getDailyClicks(db, days),
+  ]);
+  return json({ newLinks, clicks });
+}
+
+export async function handleTopLinks(
+  db: D1Database,
+  url: URL
+): Promise<Response> {
+  const limit = parseInt(url.searchParams.get('limit') || '10', 10);
+  const links = await getTopLinks(db, limit);
+  return json(links);
 }
 
 // ============ Utility ============
