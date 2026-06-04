@@ -8,11 +8,11 @@
 
 ### 仪表盘
 
-![仪表盘](images/pic1.png)
+![仪表盘](images/dashboard.png)
 
 ### API Keys 管理
 
-![API Keys](images/pic2.png)
+![API Keys](images/apikeys.png)
 
 ## ✨ 功能
 
@@ -137,8 +137,8 @@ short-url/
 │   ├── 0001_init.sql          # 基础表（users/links/api_keys/sessions）
 │   └── 0002_click_logs.sql    # 点击日志表
 ├── images/
-│   ├── pic1.png               # 仪表盘截图
-│   └── pic2.png               # API Keys 截图
+│   ├── dashboard.png           # 仪表盘截图
+│   └── apikeys.png             # API Keys 截图
 ├── src/
 │   ├── index.ts               # Worker 入口，路由分发
 │   ├── db.ts                  # D1 CRUD 封装
