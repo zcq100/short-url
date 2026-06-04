@@ -2,8 +2,6 @@
 
 基于 Cloudflare Workers + D1 的短链接服务，支持管理后台、API Key 管理、MCP 协议和点击统计图表。
 
-线上地址: **[link.zcq100.com](https://link.zcq100.com)**
-
 ## 📸 截图
 
 ### 仪表盘
